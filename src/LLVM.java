@@ -16,6 +16,7 @@ public class LLVM {
 		try {
 		destination = new File(destinationName);
 		destinationW = new FileWriter(destination);
+		destinationW.write("define i32 @main() {\n");
 		}
 		catch(IOException e)
 		{
@@ -23,8 +24,39 @@ public class LLVM {
 		}
 	}
 	
-	public void store(String n, int val) {
-		varMap.put(n, val);
+	public void store(String name, int val) {
+		try{
+			if(!varMap.containsKey(name)) {
+				destinationW.write("%"+name+"_p = alloca i32\n");
+			}
+			destinationW.write("store i32 "+val+"+,i32* %"+name+"_p\n");
+			varMap.put(name, val);
+			}
+		catch(IOException e)
+		{
+			e.printStackTrace();	
+		}
+	
+		
+	}
+	
+	public int load(String name) {
+		try{
+			if(!varMap.containsKey(name)) {
+				destinationW.write("%"+name+" = load i32* %"+name+"_p\n");
+			}
+
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();	
+		}
+		return varMap.get(name);
+	}
+	
+	public void print(int n) {
+		System.out.println("out:"+n);
+		
 	}
 	
 	public void output()
@@ -43,6 +75,8 @@ public class LLVM {
 	
 	public void finalize(){
 		try{
+			destinationW.write("ret i32 0\n");
+			destinationW.write("}\n");
 			destinationW.flush();
 			destinationW.close();
 		}

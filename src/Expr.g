@@ -20,9 +20,9 @@ public LLVM output = new LLVM();
 
 prog:   stat+ ;
                 
-stat:   ID '=' expr NEWLINE
-        {output.store($ID.text, $expr.value);}
-    |   'print(' expr ')'  { output.print($expr.value); }
+stat:   ID '=' expr NEWLINE   { output.store($ID.text, $expr.value); }
+    |   'print(' expr ')'     { output.print($expr.value); }
+    |   expr NEWLINE
     |   NEWLINE
     ;
 
