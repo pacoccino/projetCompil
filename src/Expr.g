@@ -20,15 +20,15 @@ public LLVM output = new LLVM();
 
 prog:   stat+ ;
                 
-stat:   expr NEWLINE {System.out.println($expr.value);output.add("caca");}
-    |   ID '=' expr NEWLINE
-        {memory.put($ID.text, new Integer($expr.value));}
+stat:   ID '=' expr NEWLINE
+        {output.store($ID.text, $expr.value);}
+    |   'print(' expr ')'  { output.print($expr.value); }
     |   NEWLINE
     ;
 
 expr returns [int value]
     :   e=multExpr {$value = $e.value;}
-        (   '+' e=multExpr {$value += $e.value;}
+        (   '+' e=multExpr {$value *= $e.value;}
         |   '-' e=multExpr {$value -= $e.value;}
         )*
     ;
@@ -41,8 +41,8 @@ atom returns [int value]
     :   INT {$value = Integer.parseInt($INT.text);}
     |   ID
         {
-        Integer v = (Integer)memory.get($ID.text);
-        if ( v!=null ) $value = v.intValue();
+        Integer v = output.load($ID.text);
+        if ( v!=null ) $value = v;
         else System.err.println("undefined variable "+$ID.text);
         }
     |   '(' expr ')' {$value = $expr.value;}
