@@ -20,33 +20,32 @@ public LLVM output = new LLVM();
 
 prog:   stat+ ;
                 
-stat:   ID '=' expr NEWLINE   { output.store($ID.text, $expr.value); }
-    |   'print(' expr ')'     { output.print($expr.value); }
+stat:   ID '=' expr NEWLINE
+            { if($expr.isVal) output.store($ID.text, $expr.val); 
+              else output.storeFrom($ID.text, $expr.identifier);  }
+    |   'print(' ID ')' NEWLINE    { output.print($ID.text); }
     |   expr NEWLINE
     |   NEWLINE
     ;
 
-expr returns [int value]
-    :   e=multExpr {$value = $e.value;}
-        (   '+' e=multExpr {$value *= $e.value;}
-        |   '-' e=multExpr {$value -= $e.value;}
-        )*
+expr returns [boolean isVal, int val, String identifier]
+    :   INT {$isVal = true;  $val = Integer.parseInt($INT.text);}
+    |   ID  {$isVal = false; 
+             output.load($ID.text);
+             $identifier = $ID.text;}  
     ;
 
-multExpr returns [int value]
-    :   e=atom {$value = $e.value;} ('*' e=atom {$value *= $e.value;})*
-    ; 
 
-atom returns [int value]
-    :   INT {$value = Integer.parseInt($INT.text);}
-    |   ID
-        {
-        Integer v = output.load($ID.text);
-        if ( v!=null ) $value = v;
-        else System.err.println("undefined variable "+$ID.text);
-        }
-    |   '(' expr ')' {$value = $expr.value;}
-    ;
+//atom returns [String value]
+ //   :   INT {$value = $INT.text;}
+   // |   ID
+    //    {
+      //  Integer v = output.load($ID.text);
+       // if ( v!=null ) $value = new String('\%'+$ID.text);
+        //else System.err.println("undefined variable "+$ID.text);
+       // }
+   // |   '(' expr ')' {$value = $expr.value;}
+   // ;//
 
 ID  :   ('a'..'z'|'A'..'Z')+ ;
 INT :   '0'..'9'+ ;

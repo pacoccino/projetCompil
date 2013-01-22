@@ -11,72 +11,72 @@ public class LLVM {
 	FileWriter destinationW;
 	final static String destinationName="ll.ll";
 	Map<String, Integer> varMap = new HashMap<String, Integer>();
+	StringBuffer code;
 	
 	public LLVM() {
 		try {
 		destination = new File(destinationName);
 		destinationW = new FileWriter(destination);
-		destinationW.write("define i32 @main() {\n");
 		}
 		catch(IOException e)
 		{
 			e.printStackTrace();	
 		}
+		code = new StringBuffer();
+		put("declare void @print(i32)");
+		put("define i32 @main() {");
+	}
+	
+	void put(String s) {
+
+		code.append(s+"\n");
+	
 	}
 	
 	public void store(String name, int val) {
-		try{
-			if(!varMap.containsKey(name)) {
-				destinationW.write("%"+name+"_p = alloca i32\n");
-			}
-			destinationW.write("store i32 "+val+"+,i32* %"+name+"_p\n");
-			varMap.put(name, val);
-			}
-		catch(IOException e)
-		{
-			e.printStackTrace();	
+		if(!varMap.containsKey(name)) {
+			put("%"+name+"_p = alloca i32");
 		}
-	
+		put("store i32 "+val+",i32* %"+name+"_p");
+		varMap.put(name, val);
 		
 	}
 	
-	public int load(String name) {
-		try{
-			if(!varMap.containsKey(name)) {
-				destinationW.write("%"+name+" = load i32* %"+name+"_p\n");
-			}
-
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();	
-		}
-		return varMap.get(name);
-	}
-	
-	public void print(int n) {
-		System.out.println("out:"+n);
+	public void storeFrom(String name, String from) {
 		
+		if(varMap.containsKey(from)) {
+			if(!varMap.containsKey(name)) {
+				put("%"+name+"_p = alloca i32");
+			}
+			put("store i32 %"+from+",i32* %"+name+"_p");
+			varMap.put(name, varMap.get(from));
+		}
 	}
 	
-	public void output()
-	{
+	public void load(String name) {
+		if(varMap.containsKey(name)) {
+			put("%"+name+" = load i32* %"+name+"_p");
+		}
+		else 
+			error("unknown variable");
 	}
 	
-	public void add(String s) {
-		try{
-			destinationW.write(s);
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();	
-		}
+	public void print(String name) {
+		load(name);
+		put("call void @print( i32 %"+ name +" )");
+		System.out.println("out:"+name);
+	}
+	
+	private void error(String err) {
+		System.out.println("Erreur de parcours :\n\t"+err+"\n");
 	}
 	
 	public void finalize(){
+		put("ret i32 0");
+		put("}");
+		String finalCode = new String(code);
 		try{
-			destinationW.write("ret i32 0\n");
-			destinationW.write("}\n");
+			destinationW.write(finalCode);
 			destinationW.flush();
 			destinationW.close();
 		}
