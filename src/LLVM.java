@@ -12,8 +12,8 @@ public class LLVM {
 	final static String destinationName="ll.ll";
 	Map<String, Integer> varMap = new HashMap<String, Integer>();
 	StringBuffer code;
-	int tempStack;
-	int stackSnapshot;
+	int nStack;
+	String stackName;
 	
 	public LLVM() {
 		try {
@@ -25,23 +25,20 @@ public class LLVM {
 			e.printStackTrace();	
 		}
 		code = new StringBuffer();
-		put("declare void @print(i32)");
-		put("define i32 @main() {");
-		tempStack = 0;
-		stackSnapshot = 0;
+		putCode("declare void @print(i32)");
+		putCode("define i32 @main() {");
+		nStack = 0;
 	}
 	
-	void put(String s) {
-
+	void putCode(String s) {
 		code.append(s+"\n");
-	
 	}
 	
-	public void store(String name, int val) {
+	public void storeFromInt(String name, int val) {
 		if(!varMap.containsKey(name)) {
-			put("%"+name+"_p = alloca i32");
+			putCode("%"+name+" = alloca i32");
 		}
-		put("store i32 "+val+",i32* %"+name+"_p");
+		putCode("store i32 "+val+",i32* %"+name);
 		varMap.put(name, val);
 		
 	}
@@ -50,48 +47,55 @@ public class LLVM {
 		
 		if(varMap.containsKey(from)) {
 			if(!varMap.containsKey(name)) {
-				put("%"+name+"_p = alloca i32");
+				putCode("%"+name+" = alloca i32");
 			}
-			put("store i32 %"+from+",i32* %"+name+"_p");
+			putCode("store i32 "+from+",i32* %"+name);
 			varMap.put(name, varMap.get(from));
 		}
 	}
 	
-	public void load(String name) {
+	public String load(String name) {
+		addStack();
 		if(varMap.containsKey(name)) {
-			put("%"+name+" = load i32* %"+name+"_p");
+			putCode(stackName+" = load i32* %"+name+"");
 		}
 		else 
 			error("unknown variable "+name);
+		return stackName;
 	}
 	
 	public void print(String name) {
-		load(name);
-		put("call void @print( i32 %"+ name +" )");
+		putCode("call void @print( i32 "+ load(name) +" )");
 		System.out.println("out:"+name);
 	}
 	
 	public String addition(String a, String b){
-		put("%t"+tempStack+" = add i32 "+a+", "+b);
-		varMap.put("t"+tempStack, -1);
-		tempStack++;
-		return "t"+(tempStack-1);
+		addStack();
+		putCode(stackName+" = add i32 "+a+", "+b);
+		varMap.put(stackName, -1);
+		return stackName;
+	}
+	
+	private void addStack() {
+		stackName = "%t"+nStack;
+		nStack++;
 	}
 	
 	private void error(String err) {
 		System.out.println("Erreur de parcours :\n\t"+err+"\n");
 	}
 	
-	public void setStack() {
+	/*public void setStack() {
 		stackSnapshot=tempStack;
 	}
 	public void endStack() {
+		
 		tempStack=stackSnapshot;
-	}
+	}*/
 	
 	public void finalize(){
-		put("ret i32 0");
-		put("}");
+		putCode("ret i32 0");
+		putCode("}");
 		String finalCode = new String(code);
 		try{
 			destinationW.write(finalCode);

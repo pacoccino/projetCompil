@@ -21,32 +21,32 @@ public LLVM output = new LLVM();
 prog:   stat+ ;
                 
 stat:  
-        ID '=' INT NEWLINE { output.store($ID.text, Integer.parseInt($INT.text)); } 
-    |   ID '=' expr NEWLINE
-            { output.storeFrom($ID.text, $expr.identifier);  }
+        ID '=' INT NEWLINE   { output.storeFromInt($ID.text, Integer.parseInt($INT.text)); } 
+    |   ID '=' expr NEWLINE  { output.storeFrom($ID.text, $expr.identifier);  }
     |   'print(' ID ')' NEWLINE    { output.print($ID.text); }
   //  |   expr NEWLINE
     |   NEWLINE
     ;
 
 expr returns [String identifier]
-    :   ID  {output.load($ID.text);  $identifier = $ID.text;}
+    :   ID  {$identifier = output.load($ID.text);}
     |   addition  {$identifier=$addition.identifier;}
     ;
     
 addition returns [String identifier]
-    :   a=atom '+' b=additions { output.setStack(); 
+    :   a=atom '+' b=additions { //output.setStack(); 
                                  $identifier = output.addition($a.identifier, $b.identifier); 
-                                 output.endStack(); }
+                                 //output.endStack();
+                                }
     ;
 additions returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
-    |   a=atom '+' b=additions { $identifier = '\%'+output.addition($a.identifier, $b.identifier); }
+    |   a=atom '+' b=additions { $identifier = output.addition($a.identifier, $b.identifier); }
     ;
 
 atom returns [String identifier]
     :   a=INT     { $identifier = $a.text; }
-    |   a=ID      { output.load($ID.text); $identifier = '\%'+$a.text; }
+    |   a=ID      { $identifier = output.load($ID.text); }
     ;
 
 
