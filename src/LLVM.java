@@ -12,6 +12,8 @@ public class LLVM {
 	final static String destinationName="ll.ll";
 	Map<String, Integer> varMap = new HashMap<String, Integer>();
 	StringBuffer code;
+	int tempStack;
+	int stackSnapshot;
 	
 	public LLVM() {
 		try {
@@ -25,6 +27,8 @@ public class LLVM {
 		code = new StringBuffer();
 		put("declare void @print(i32)");
 		put("define i32 @main() {");
+		tempStack = 0;
+		stackSnapshot = 0;
 	}
 	
 	void put(String s) {
@@ -58,7 +62,7 @@ public class LLVM {
 			put("%"+name+" = load i32* %"+name+"_p");
 		}
 		else 
-			error("unknown variable");
+			error("unknown variable "+name);
 	}
 	
 	public void print(String name) {
@@ -67,8 +71,22 @@ public class LLVM {
 		System.out.println("out:"+name);
 	}
 	
+	public String addition(String a, String b){
+		put("%t"+tempStack+" = add i32 "+a+", "+b);
+		varMap.put("t"+tempStack, -1);
+		tempStack++;
+		return "t"+(tempStack-1);
+	}
+	
 	private void error(String err) {
 		System.out.println("Erreur de parcours :\n\t"+err+"\n");
+	}
+	
+	public void setStack() {
+		stackSnapshot=tempStack;
+	}
+	public void endStack() {
+		tempStack=stackSnapshot;
 	}
 	
 	public void finalize(){
