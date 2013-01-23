@@ -38,7 +38,7 @@ prog:   stmts ;
 stmts : (stmt terms) +
       ;
                 
-stmt    : IF expr THEN stmts terms END
+stmt    : IF cond THEN stmts terms END {output.uncondbr($cond.identifier);}
       //| IF expr THEN stmts terms ELSE stmts terms END 
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
@@ -48,6 +48,11 @@ stmt    : IF expr THEN stmts terms END
       //| DEF ID opt_params term stmts terms END
       ;
 
+cond returns [String identifier]
+    :
+    a=expr COND b=expr {$identifier = output.condition($a.identifier, $b.identifier, $COND.text);}
+    ;
+    
 expr returns [String identifier]
     :   atom      {$identifier = $atom.identifier;}
     |   a=arythm  {$identifier = $a.identifier;}
@@ -87,5 +92,6 @@ ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+ ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
 INT :   '0'..'9'+ ;
 NEWLINE:'\r'? '\n' ;
 WS  :   (' '|'\t')+ {skip();} ; 
+COND : ('<' | '<=' | '>' | '>=' | '==' | '!=');
 FLOAT:  ('0'..'9')+ '.' ('0'..'9')* ;
 STRING: '\"' (ID|'\n')* '\"';
