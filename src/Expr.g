@@ -50,15 +50,20 @@ stmt    : IF expr THEN stmts terms END
 
 expr returns [String identifier]
     :   atom      {$identifier = $atom.identifier;}
-    |   addition  {$identifier = $addition.identifier;}
+    |   a=arythm  {$identifier = $a.identifier;}
     ;
+    
+arythm returns [String identifier]
+    :   
     
 addition returns [String identifier]
     :   a=atom '+' b=additions { //output.setStack(); 
                                  $identifier = output.addition($a.identifier, $b.identifier); 
                                  //output.endStack();
                                 }
+    |   multiplication
     ;
+    
 additions returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
     |   a=atom '+' b=additions { $identifier = output.addition($a.identifier, $b.identifier); }
