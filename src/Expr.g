@@ -1,7 +1,7 @@
 grammar Expr;
 
 options {
-  language=Java;
+	language=Java;
 }
 
 tokens {
@@ -41,8 +41,8 @@ stmts : (stmt terms) +
       ;
              
 stmt    : IF WS expr WS THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($expr.identifier);}
-      //| FOR ID IN expr TO expr term stmts terms END
-      //| WHILE expr DO term stmts terms END 
+        | WHILE WS expr WS DO NEWLINE stmts END {}
+        | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
       //| RETURN expr
         | 'print(' ID ')'   { output.print($ID.text); }
