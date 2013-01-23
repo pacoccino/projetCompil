@@ -39,7 +39,8 @@ stmts : (stmt terms) +
       ;
                 
 stmt    :
-        IF cond THEN NEWLINE stmts END {output.uncondbr($cond.identifier);}
+        IF cond THEN NEWLINE stmts
+        (ELSE NEWLINE stmts)? END {output.condbr($cond.identifier);}
        // | IF cond THEN NEWLINE stmts ELSE stmts END 
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 

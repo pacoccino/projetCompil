@@ -70,6 +70,14 @@ public class LLVM {
 	public void uncondbr(String cName) {
 		addBr();
 		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+		putCode("goto %" + brNameF);
+		putCode(brNameT + ":");
+		putCode(brNameF + ":");
+	}
+	
+	public void condbr(String cName) {
+		addBr();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
 		putCode(brNameT + ":");
 		putCode(brNameF + ":");
 	}
