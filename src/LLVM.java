@@ -38,13 +38,12 @@ public class LLVM {
 		code.append(s+"\n");
 	}
 
-	public void storeFromInt(String name, int val) {
+	public void store(String name, String val) {
 		if(!varMap.containsKey(name)) {
 			putCode("%"+name+" = alloca i32");
 		}
 		putCode("store i32 "+val+",i32* %"+name);
-		varMap.put(name, val);
-
+		varMap.put(name, 0);
 	}
 
 	public String condition(String aName, String bName, String cond) {
@@ -76,8 +75,8 @@ public class LLVM {
 	}
 
 	public void storeFrom(String name, String from) {
-
-		if(varMap.containsKey(from)) {
+		
+		if(from.charAt(0)!='%' || varMap.containsKey(from)) {
 			if(!varMap.containsKey(name)) {
 				putCode("%"+name+" = alloca i32");
 			}
@@ -104,7 +103,7 @@ public class LLVM {
 	public String addition(String a, String b){
 		addStack();
 		putCode(stackName+" = add i32 "+a+", "+b);
-		varMap.put(stackName, -1);
+		varMap.put(stackName.substring(1), -1);
 		return stackName;
 	}
 
@@ -132,6 +131,8 @@ public class LLVM {
 	}*/
 
 	public void finalize(){
+		for(String s:varMap.keySet())
+			System.out.println(s);
 		putCode("ret i32 0");
 		putCode("}");
 		String finalCode = new String(code);

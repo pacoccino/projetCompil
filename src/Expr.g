@@ -4,6 +4,18 @@ options {
   language=Java;
 }
 
+tokens {
+  IF='if';
+  THEN='then';
+  END='end';
+  ELSE='else';
+  FOR='for';
+  IN='in';
+  TO='..';
+  WHILE='while';
+  DO='do';
+}
+
 @header {
 import java.util.HashMap;
 }
@@ -18,17 +30,23 @@ HashMap memory = new HashMap();
 public LLVM output = new LLVM();
 }
 
-prog:   stat+ ;
+
+
+
+prog:   stmts ;
+    
+stmts : (stmt terms) +
+      ;
                 
-stat:  
-        ID '=' INT NEWLINE   { output.storeFromInt($ID.text, Integer.parseInt($INT.text)); } 
-    |   ID '=' expr NEWLINE  { output.storeFrom($ID.text, $expr.identifier);  }
-    |   'print(' ID ')' NEWLINE    { output.print($ID.text); }
-    |   'if ' cond ' then' NEWLINE {output.uncondbr($cond.identifier);}
-    |   'if'  cond ' then' NEWLINE 'else' NEWLINE {}
-  //  |   expr NEWLINE
-    |   NEWLINE
-    ;
+stmt    : IF cond THEN stmts terms END {output.uncondbr($cond.identifier);}
+      //| IF expr THEN stmts terms ELSE stmts terms END 
+      //| FOR ID IN expr TO expr term stmts terms END
+      //| WHILE expr DO term stmts terms END 
+        | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
+      //| RETURN expr
+        | 'print(' ID ')'   { output.print($ID.text); }
+      //| DEF ID opt_params term stmts terms END
+      ;
 
 cond returns [String identifier]
     :
@@ -36,8 +54,8 @@ cond returns [String identifier]
     ;
     
 expr returns [String identifier]
-    :   ID  {$identifier = output.load($ID.text);}
-    |   addition  {$identifier=$addition.identifier;}
+    :   atom      {$identifier = $atom.identifier;}
+    |   addition  {$identifier = $addition.identifier;}
     ;
     
 addition returns [String identifier]
@@ -56,20 +74,19 @@ atom returns [String identifier]
     |   a=ID      { $identifier = output.load($ID.text); }
     ;
 
+terms:
+     term+
+    ;
+term      
+    : ';'
+    | NEWLINE
+    ;
 
-//atom returns [String value]
- //   :   INT {$value = $INT.text;}
-   // |   ID
-    //    {
-      //  Integer v = output.load($ID.text);
-       // if ( v!=null ) $value = new String('\%'+$ID.text);
-        //else System.err.println("undefined variable "+$ID.text);
-       // }
-   // |   '(' expr ')' {$value = $expr.value;}
-   // ;//
 
-ID  :   ('a'..'z'|'A'..'Z')+ ;
+ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+ ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
 INT :   '0'..'9'+ ;
 NEWLINE:'\r'? '\n' ;
 WS  :   (' '|'\t')+ {skip();} ; 
 COND : ('<' | '<=' | '>' | '>=' | '==' | '!=');
+FLOAT:  ('0'..'9')+ '.' ('0'..'9')* ;
+STRING: '\"' (ID|'\n')* '\"';
