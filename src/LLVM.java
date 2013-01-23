@@ -106,6 +106,13 @@ public class LLVM {
 		varMap.put(stackName.substring(1), -1);
 		return stackName;
 	}
+	
+	public String multiply(String a, String b){
+		addStack();
+		putCode(stackName+" = mul i32 "+a+", "+b);
+		varMap.put(stackName.substring(1), -1);
+		return stackName;
+	}
 
 	private void addStack() {
 		stackName = "%t"+nStack;

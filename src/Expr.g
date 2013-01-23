@@ -54,24 +54,18 @@ cond returns [String identifier]
     ;
     
 expr returns [String identifier]
-    :   atom      {$identifier = $atom.identifier;}
-    |   a=arythm  {$identifier = $a.identifier;}
+    :   a=addition  {$identifier = $a.identifier;}
     ;
-    
-arythm returns [String identifier]
-    :   
+     
     
 addition returns [String identifier]
-    :   a=atom '+' b=additions { //output.setStack(); 
-                                 $identifier = output.addition($a.identifier, $b.identifier); 
-                                 //output.endStack();
-                                }
-    |   multiplication
+    :   a=multiplication               { $identifier = $a.identifier; }
+    ( '+' b=multiplication { $identifier = output.addition($a.identifier, $b.identifier); } )*
     ;
     
-additions returns [String identifier]
+multiplication returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
-    |   a=atom '+' b=additions { $identifier = output.addition($a.identifier, $b.identifier); }
+        ( '*' b=atom { $identifier = output.multiply($a.identifier, $b.identifier); } )*
     ;
 
 atom returns [String identifier]
