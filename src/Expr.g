@@ -5,8 +5,8 @@ options {
 }
 
 tokens {
-  IF='if ';
-  THEN=' then';
+  IF='if';
+  THEN='then';
   END='end';
   ELSE='else';
   FOR='for';
@@ -14,8 +14,6 @@ tokens {
   TO='..';
   WHILE='while';
   DO='do';
-  TRUE='true';
-  FALSE='false';
   AND='&&';
   OR='||';
 }
@@ -42,7 +40,7 @@ prog:   stmts ;
 stmts : (stmt terms) +
       ;
 
-stmt    : IF cond THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($cond.identifier);}
+stmt    : IF WS expr WS THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($expr.identifier);}
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
@@ -51,21 +49,17 @@ stmt    : IF cond THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr(
       //| DEF ID opt_params term stmts terms END
       ;
 
-cond returns [String identifier]
-    :
-    a=expr COND b=expr {$identifier = output.condition($a.identifier, $b.identifier, $COND.text);}
-    ;
     
 expr returns [String identifier]
     :   a=boolexpr {$identifier = $a.identifier;}
     ;
         
 boolexpr returns [String identifier]
-    :   a=compexpr (BOOLOP b=compexpr { } ) {$identifier = $a.identifier;}
+    :   a=compexpr ((AND | OR) b=compexpr { } )* {$identifier = $a.identifier;}
     ;
     
 compexpr returns [String identifier]
-    :   a=addition (COMP b=addition { } ) {$identifier = $a.identifier;}
+    :   a=addition (COMP b=addition {$identifier = output.condition($a.identifier, $b.identifier, $COMP.text);} )* {$identifier = $a.identifier;}
     ; 
      
     
@@ -100,5 +94,3 @@ WS  :   (' '|'\t')+ {skip();} ;
 COMP : ('<' | '<=' | '>' | '>=' | '==' | '!=');
 FLOAT:  ('0'..'9')+ '.' ('0'..'9')* ;
 STRING: '\"' (ID|'\n')* '\"';
-BOOL: (TRUE | FALSE );
-OPBOOL: (AND | OR);
