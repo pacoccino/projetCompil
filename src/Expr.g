@@ -24,10 +24,17 @@ stat:
         ID '=' INT NEWLINE   { output.storeFromInt($ID.text, Integer.parseInt($INT.text)); } 
     |   ID '=' expr NEWLINE  { output.storeFrom($ID.text, $expr.identifier);  }
     |   'print(' ID ')' NEWLINE    { output.print($ID.text); }
+    |   'if ' cond ' then' NEWLINE {output.uncondbr($cond.identifier);}
+    |   'if'  cond ' then' NEWLINE 'else' NEWLINE {}
   //  |   expr NEWLINE
     |   NEWLINE
     ;
 
+cond returns [String identifier]
+    :
+    a=expr COND b=expr {$identifier = output.condition($a.identifier, $b.identifier, $COND.text);}
+    ;
+    
 expr returns [String identifier]
     :   ID  {$identifier = output.load($ID.text);}
     |   addition  {$identifier=$addition.identifier;}
@@ -65,3 +72,4 @@ ID  :   ('a'..'z'|'A'..'Z')+ ;
 INT :   '0'..'9'+ ;
 NEWLINE:'\r'? '\n' ;
 WS  :   (' '|'\t')+ {skip();} ; 
+COND : ('<' | '<=' | '>' | '>=' | '==' | '!=');

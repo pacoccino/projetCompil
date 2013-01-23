@@ -13,12 +13,15 @@ public class LLVM {
 	Map<String, Integer> varMap = new HashMap<String, Integer>();
 	StringBuffer code;
 	int nStack;
+	int brStack;
 	String stackName;
-	
+	String brNameT;
+	String brNameF;
+
 	public LLVM() {
 		try {
-		destination = new File(destinationName);
-		destinationW = new FileWriter(destination);
+			destination = new File(destinationName);
+			destinationW = new FileWriter(destination);
 		}
 		catch(IOException e)
 		{
@@ -28,23 +31,52 @@ public class LLVM {
 		putCode("declare void @print(i32)");
 		putCode("define i32 @main() {");
 		nStack = 0;
+		brStack = 0;
 	}
-	
+
 	void putCode(String s) {
 		code.append(s+"\n");
 	}
-	
+
 	public void storeFromInt(String name, int val) {
 		if(!varMap.containsKey(name)) {
 			putCode("%"+name+" = alloca i32");
 		}
 		putCode("store i32 "+val+",i32* %"+name);
 		varMap.put(name, val);
-		
+
 	}
-	
+
+	public String condition(String aName, String bName, String cond) {
+		addStack();
+		String compItem = null;
+		if (cond.equals("=="))
+			compItem = new String("eq");
+		else  if (cond.equals("!="))
+			compItem = new String("ne");
+		else  if (cond.equals("<="))
+			compItem = new String("use");
+		else  if (cond.equals(">="))
+			compItem = new String("sge");
+		else  if (cond.equals(">"))
+			compItem = new String("sgt");
+		else  if (cond.equals("<"))
+			compItem = new String("slt");
+		else
+			error("opérateur non prit en charge");
+		putCode(stackName + "= icmp " + compItem + " i32 " + aName + ", " + bName);
+		return stackName;
+	}
+
+	public void uncondbr(String cName) {
+		addBr();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+		putCode(brNameT + ":");
+		putCode(brNameF + ":");
+	}
+
 	public void storeFrom(String name, String from) {
-		
+
 		if(varMap.containsKey(from)) {
 			if(!varMap.containsKey(name)) {
 				putCode("%"+name+" = alloca i32");
@@ -53,7 +85,7 @@ public class LLVM {
 			varMap.put(name, varMap.get(from));
 		}
 	}
-	
+
 	public String load(String name) {
 		addStack();
 		if(varMap.containsKey(name)) {
@@ -63,36 +95,42 @@ public class LLVM {
 			error("unknown variable "+name);
 		return stackName;
 	}
-	
+
 	public void print(String name) {
 		putCode("call void @print( i32 "+ load(name) +" )");
 		System.out.println("out:"+name);
 	}
-	
+
 	public String addition(String a, String b){
 		addStack();
 		putCode(stackName+" = add i32 "+a+", "+b);
 		varMap.put(stackName, -1);
 		return stackName;
 	}
-	
+
 	private void addStack() {
 		stackName = "%t"+nStack;
 		nStack++;
 	}
-	
+
+	private void addBr() {
+		brNameT = "ifT" + brStack;
+		brNameF = "ifF" + brStack;
+		brStack++;
+	}
+
 	private void error(String err) {
 		System.out.println("Erreur de parcours :\n\t"+err+"\n");
 	}
-	
+
 	/*public void setStack() {
 		stackSnapshot=tempStack;
 	}
 	public void endStack() {
-		
+
 		tempStack=stackSnapshot;
 	}*/
-	
+
 	public void finalize(){
 		putCode("ret i32 0");
 		putCode("}");
