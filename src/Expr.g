@@ -5,8 +5,8 @@ options {
 }
 
 tokens {
-  IF='if';
-  THEN='then';
+  IF='if ';
+  THEN=' then';
   END='end';
   ELSE='else';
   FOR='for';
@@ -38,7 +38,8 @@ prog:   stmts ;
 stmts : (stmt terms) +
       ;
                 
-stmt    : IF cond THEN stmts terms END {output.uncondbr($cond.identifier);}
+stmt    : //IF cond THEN stmts terms END {output.uncondbr($cond.identifier);}
+        IF cond THEN terms stmts END {}
       //| IF expr THEN stmts terms ELSE stmts terms END 
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
