@@ -41,8 +41,9 @@ prog:   stmts ;
     
 stmts : (stmt terms) +
       ;
-                
+             
 stmt    : IF WS expr WS THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($expr.identifier);}
+
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
