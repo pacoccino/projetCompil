@@ -14,6 +14,10 @@ tokens {
   TO='..';
   WHILE='while';
   DO='do';
+  TRUE='true';
+  FALSE='false';
+  AND='&&';
+  OR='||';
 }
 
 @header {
@@ -38,9 +42,7 @@ prog:   stmts ;
 stmts : (stmt terms) +
       ;
                 
-stmt    : //IF cond THEN stmts terms END {output.uncondbr($cond.identifier);}
-        IF cond THEN terms stmts END {}
-      //| IF expr THEN stmts terms ELSE stmts terms END 
+stmt    : IF cond THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($cond.identifier);}
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
@@ -55,18 +57,26 @@ cond returns [String identifier]
     ;
     
 expr returns [String identifier]
-    :   a=addition  {$identifier = $a.identifier;}
+    :   a=boolexpr {$identifier = $a.identifier;}
     ;
+        
+boolexpr returns [String identifier]
+    :   a=compexpr (BOOLOP b=compexpr { } ) {$identifier = $a.identifier;}
+    ;
+    
+compexpr returns [String identifier]
+    :   a=addition (COMP b=addition { } ) {$identifier = $a.identifier;}
+    ; 
      
     
 addition returns [String identifier]
     :   a=multiplication               { $identifier = $a.identifier; }
-    ( '+' b=multiplication { $identifier = output.addition($a.identifier, $b.identifier); } )*
+    ( '+' b=multiplication { $identifier = output.addition($identifier, $b.identifier); } )*
     ;
     
 multiplication returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
-        ( '*' b=atom { $identifier = output.multiply($a.identifier, $b.identifier); } )*
+        ( '*' b=atom { $identifier = output.multiply($identifier, $b.identifier); } )*
     ;
 
 atom returns [String identifier]
@@ -87,6 +97,8 @@ ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+ ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
 INT :   '0'..'9'+ ;
 NEWLINE:'\r'? '\n' ;
 WS  :   (' '|'\t')+ {skip();} ; 
-COND : ('<' | '<=' | '>' | '>=' | '==' | '!=');
+COMP : ('<' | '<=' | '>' | '>=' | '==' | '!=');
 FLOAT:  ('0'..'9')+ '.' ('0'..'9')* ;
 STRING: '\"' (ID|'\n')* '\"';
+BOOL: (TRUE | FALSE );
+BOOLOP: (AND | OR);
