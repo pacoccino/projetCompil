@@ -42,7 +42,10 @@ prog:   stmts ;
 stmts : (stmt terms) +
       ;
              
-stmt    : IF WS expr WS THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($expr.identifier);}
+stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);} 
+          stmts 
+          (ELSE NEWLINE {output.if_else();} stmts END {output.if_else_end();}    
+          | END {output.if_end();})                     
 
       //| FOR ID IN expr TO expr term stmts terms END
       //| WHILE expr DO term stmts terms END 
@@ -58,11 +61,13 @@ expr returns [String identifier]
     ;
         
 boolexpr returns [String identifier]
-    :   a=compexpr ((WS)* (AND | OR) (WS)* b=compexpr { } )* {$identifier = $a.identifier;}
+    :   a=compexpr  {$identifier = $a.identifier;}
+        ((WS)* (AND | OR) (WS)* b=compexpr { } )*
     ;
     
 compexpr returns [String identifier]
-    :   a=addition ((WS)* COMP (WS)* b=addition {$identifier = output.condition($a.identifier, $b.identifier, $COMP.text); })* {$identifier = $a.identifier;}
+    :   a=addition {$identifier = $a.identifier;}
+        ((WS)* COMP (WS)* b=addition {$identifier = output.condition($a.identifier, $b.identifier, $COMP.text); })* 
     ; 
      
     
