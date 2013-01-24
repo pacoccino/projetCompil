@@ -46,7 +46,6 @@ stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);}
           | END {output.if_end();})                     
         | WHILE WS expr WS DO NEWLINE stmts END {}
         | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
-
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
       //| RETURN expr
         | 'print(' ID ')'   { output.print($ID.text); }

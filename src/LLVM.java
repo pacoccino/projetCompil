@@ -100,6 +100,8 @@ public class LLVM {
 		
 	}
 	public void if_end() {
+		putCode("br label %"+brNameF);
+		putCode("br label %"+brNameF);
 		putCode(brNameF + ":");
 		
 	}
