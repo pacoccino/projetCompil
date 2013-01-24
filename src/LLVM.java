@@ -18,6 +18,7 @@ public class LLVM {
 	String stackName;
 	String brNameT;
 	String brNameF;
+	String brNameE;
 	String loopInstructions;
 	String loopContinuation;
 
@@ -67,7 +68,7 @@ public class LLVM {
 			compItem = new String("slt");
 		else
 			error("opérateur non prit en charge");
-		putCode(stackName + "= icmp " + compItem + " i32 " + aName + ", " + bName);
+		putCode(stackName + " = icmp " + compItem + " i32 " + aName + ", " + bName);
 		return stackName;
 	}
 
@@ -84,6 +85,29 @@ public class LLVM {
 		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
 		putCode(brNameT + ":");
 		putCode(brNameF + ":");
+	}
+	
+	public void if_in(String cName) {
+		addBr();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+		putCode(brNameT + ":");
+		
+	}
+	public void if_else() {
+		putCode("br label %"+brNameE);
+		putCode(brNameF + ":");
+		
+	}
+	public void if_else_end() {
+		putCode("br label %"+brNameE);
+		putCode(brNameE + ":");
+		
+	}
+	public void if_end() {
+		putCode("br label %"+brNameF);
+		putCode("br label %"+brNameF);
+		putCode(brNameF + ":");
+		
 	}
 
 	public void	loopwhile(String cName) {
@@ -140,6 +164,7 @@ public class LLVM {
 	private void addBr() {
 		brNameT = "ifT" + brStack;
 		brNameF = "ifF" + brStack;
+		brNameE = "ifE" + brStack;
 		brStack++;
 	}
 	
