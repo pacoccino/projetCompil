@@ -41,7 +41,7 @@ stmts : (stmt terms) +
       ;
              
 stmt    : IF WS expr WS THEN NEWLINE stmts (ELSE NEWLINE stmts)? END {output.uncondbr($expr.identifier);}
-        | WHILE WS expr WS DO NEWLINE stmts END {}
+        | WHILE WS expr WS DO NEWLINE stmts END //{output.loopWhile($expr.identifier);}
         | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
       //| RETURN expr
