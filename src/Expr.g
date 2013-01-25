@@ -16,6 +16,7 @@ tokens {
   DO='do';
   AND='&&';
   OR='||';
+  RETURN='return';
 }
 
 @header {
@@ -48,7 +49,7 @@ stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);}
           stmts END {output.while_out($expr.identifier);}
         | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
-      //| RETURN expr
+        | RETURN WS expr {output.returnExpr($expr.identifier);}
         | 'print(' ID ')'   { output.print($ID.text); }
       //| DEF ID opt_params term stmts terms END
       ;
