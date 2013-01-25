@@ -14,10 +14,14 @@ public class LLVM {
 	StringBuffer code;
 	int nStack;
 	int brStack;
+	int loopStack;
 	String stackName;
 	String brNameT;
 	String brNameF;
 	String brNameE;
+	String loopCondition;
+	String loopInstructions;
+	String loopContinuation;
 
 	public LLVM() {
 		try {
@@ -33,6 +37,7 @@ public class LLVM {
 		putCode("define i32 @main() {");
 		nStack = 0;
 		brStack = 0;
+		loopStack = 0;
 	}
 
 	void putCode(String s) {
@@ -89,6 +94,23 @@ public class LLVM {
 		putCode(brNameT + ":");
 		
 	}
+	
+	public void while_cond() {
+		addLoop();
+		putCode("br label %" + loopCondition);
+		putCode(loopCondition + ":");
+	}
+	
+	public void while_in(String cName) {
+		putCode("br i1 "+ cName + ", label %" + loopInstructions + ", label %" + loopContinuation);
+		putCode(loopInstructions + ":");
+	}
+	
+	public void while_out(String cName) {
+		putCode("br i1 "+ cName + ", label %" + loopCondition + ", label %" + loopContinuation);
+		putCode(loopContinuation + ":");
+	}
+	
 	public void if_else() {
 		putCode("br label %"+brNameE);
 		putCode(brNameF + ":");
@@ -106,6 +128,12 @@ public class LLVM {
 		
 	}
 
+	public void	loopwhile(String cName) {
+		addLoop();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+	}
+	
+	
 	public void storeFrom(String name, String from) {
 		
 		if(from.charAt(0)!='%' || varMap.containsKey(from)) {
@@ -156,6 +184,13 @@ public class LLVM {
 		brNameF = "ifF" + brStack;
 		brNameE = "ifE" + brStack;
 		brStack++;
+	}
+	
+	private void addLoop() {
+		loopCondition = "loopCond" + loopStack;
+		loopInstructions = "loopInstructs" + loopStack;
+		loopContinuation = "LoopContinu" + loopStack;
+		loopStack++;
 	}
 
 	private void error(String err) {
