@@ -72,15 +72,20 @@ compexpr returns [String identifier]
 addition returns [String identifier]
     :   a=multiplication               { $identifier = $a.identifier; }
     ( '+' b=multiplication { $identifier = output.addition($identifier, $b.identifier); } )*
+    ( '-' b=multiplication { $identifier = output.substract($identifier, $b.identifier); } )*
     ;
     
 multiplication returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
         ( '*' b=atom { $identifier = output.multiply($identifier, $b.identifier); } )*
+        ( '/' b=atom { $identifier = output.division($identifier, $b.identifier); } )*
     ;
 
 atom returns [String identifier]
     :   a=INT     { $identifier = $a.text; }
+    |   a=FLOAT   { $identifier = $a.text; }
+    |   a=STRING  { $identifier = $a.text; }
+    |   a=BOOL    { $identifier = $a.text; }
     |   a=ID      { $identifier = output.load($ID.text); }
     ;
 
@@ -92,11 +97,11 @@ term
     | NEWLINE
     ;
 
-
+BOOL : ('true' | 'false');
 ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+ ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
 INT :   '0'..'9'+ ;
+FLOAT :   ('0'..'9')+ '.' ('0'..'9')* ;
 NEWLINE:'\r'? '\n' ;
 WS  :   (' '|'\t')+  ; 
 COMP : ('<' | '<=' | '>' | '>=' | '==' | '!=');
-FLOAT:  ('0'..'9')+ '.' ('0'..'9')* ;
-STRING: '\"' (ID|'\n')* '\"';
+STRING: '\"' (.)* '\"';

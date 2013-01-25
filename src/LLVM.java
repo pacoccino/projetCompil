@@ -6,11 +6,13 @@ import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 
+import sun.net.www.protocol.http.AuthCacheValue.Type;
+
 public class LLVM {
 	File destination;
 	FileWriter destinationW;
 	final static String destinationName="ll.ll";
-	Map<String, Integer> varMap = new HashMap<String, Integer>();
+	Map<String, Variable> varMap = new HashMap<String, Variable>();
 	StringBuffer code;
 	int nStack;
 	int brStack;
@@ -45,11 +47,45 @@ public class LLVM {
 	}
 
 	public void store(String name, String val) {
+		Types type = getType(name);
 		if(!varMap.containsKey(name)) {
 			putCode("%"+name+" = alloca i32");
 		}
 		putCode("store i32 "+val+",i32* %"+name);
-		varMap.put(name, 0);
+		varMap.put(name, new Variable(type));
+	}
+	
+	private Types getType(String code) {
+		final String INT = "[0-9]+";
+		final String FLOAT = "[0-9]+\\.[0-9]*";
+		final String ID  = "[\\$@]?[a-zA-Z_]+[a-zA-Z0-9_]*";
+		final String BOOL  = "true|false";
+		final String STRING  = "\".*\"";
+		if(code.matches("%" + ID)) {
+			System.out.println("variable");
+			return Types.OBJECT;
+		}
+		else if(code.matches(INT)){
+			return Types.INT;
+		}
+		else if(code.matches(FLOAT)){
+			return Types.FLOAT;
+		}
+		else if(code.matches(BOOL)){
+			return Types.BOOLEAN;
+		}
+		else if(code.matches(ID)){
+			return Types.INT;
+		}
+		else if(code.matches(STRING)){
+			return Types.STRING;
+		}
+		
+		return Types.OBJECT;
+	}
+	
+	public void printType(String s) {
+		System.out.println(getType(s).toString());
 	}
 
 	public String condition(String aName, String bName, String cond) {
@@ -72,28 +108,7 @@ public class LLVM {
 		putCode(stackName + " = icmp " + compItem + " i32 " + aName + ", " + bName);
 		return stackName;
 	}
-
-	public void uncondbr(String cName) {
-		addBr();
-		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
-		putCode("goto %" + brNameF);
-		putCode(brNameT + ":");
-		putCode(brNameF + ":");
-	}
 	
-	public void condbr(String cName) {
-		addBr();
-		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
-		putCode(brNameT + ":");
-		putCode(brNameF + ":");
-	}
-	
-	public void if_in(String cName) {
-		addBr();
-		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
-		putCode(brNameT + ":");
-		
-	}
 	
 	public void while_cond() {
 		addLoop();
@@ -109,6 +124,13 @@ public class LLVM {
 	public void while_out(String cName) {
 		putCode("br i1 "+ cName + ", label %" + loopCondition + ", label %" + loopContinuation);
 		putCode(loopContinuation + ":");
+	}
+	
+	public void if_in(String cName) {
+		addBr();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+		putCode(brNameT + ":");
+		
 	}
 	
 	public void if_else() {
@@ -128,10 +150,6 @@ public class LLVM {
 		
 	}
 
-	public void	loopwhile(String cName) {
-		addLoop();
-		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
-	}
 	
 	
 	public void storeFrom(String name, String from) {
@@ -162,15 +180,41 @@ public class LLVM {
 
 	public String addition(String a, String b){
 		addStack();
-		putCode(stackName+" = add i32 "+a+", "+b);
-		varMap.put(stackName.substring(1), -1);
+		Variable newVar = new Variable();
+		if(getType(a) == Types.INT && getType(b) == Types.INT)
+		{
+			newVar.type = Types.INT;
+		}
+		else if(getType(a) == Types.FLOAT && getType(b) == Types.FLOAT)
+		{
+			newVar.type = Types.INT;
+		}
+		putCode(stackName+" = add "+ newVar.ll_typeName() +" "+a+", "+b);
+		varMap.put(stackName.substring(1),newVar);
+		return stackName;
+	}
+	
+	public String substract(String a, String b){
+		addStack();
+		Types type = Types.OBJECT;
+		putCode(stackName+" = sub i32 "+a+", "+b);
+		varMap.put(stackName.substring(1), new Variable(type));
 		return stackName;
 	}
 	
 	public String multiply(String a, String b){
 		addStack();
+		Types type = Types.OBJECT;
 		putCode(stackName+" = mul i32 "+a+", "+b);
-		varMap.put(stackName.substring(1), -1);
+		varMap.put(stackName.substring(1), new Variable(type));
+		return stackName;
+	}
+	
+	public String division(String a, String b){
+		addStack();
+		Types type = Types.OBJECT;
+		putCode(stackName+" = mul i32 "+a+", "+b);
+		varMap.put(stackName.substring(1), new Variable(type));
 		return stackName;
 	}
 
