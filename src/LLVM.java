@@ -19,6 +19,7 @@ public class LLVM {
 	String brNameT;
 	String brNameF;
 	String brNameE;
+	String loopCondition;
 	String loopInstructions;
 	String loopContinuation;
 
@@ -93,6 +94,23 @@ public class LLVM {
 		putCode(brNameT + ":");
 		
 	}
+	
+	public void while_cond() {
+		addLoop();
+		putCode("br label %" + loopCondition);
+		putCode(loopCondition + ":");
+	}
+	
+	public void while_in(String cName) {
+		putCode("br i1 "+ cName + ", label %" + loopInstructions + ", label %" + loopContinuation);
+		putCode(loopInstructions + ":");
+	}
+	
+	public void while_out(String cName) {
+		putCode("br i1 "+ cName + ", label %" + loopCondition + ", label %" + loopContinuation);
+		putCode(loopContinuation + ":");
+	}
+	
 	public void if_else() {
 		putCode("br label %"+brNameE);
 		putCode(brNameF + ":");
@@ -169,6 +187,7 @@ public class LLVM {
 	}
 	
 	private void addLoop() {
+		loopCondition = "loopCond" + loopStack;
 		loopInstructions = "loopInstructs" + loopStack;
 		loopContinuation = "LoopContinu" + loopStack;
 		loopStack++;

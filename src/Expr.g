@@ -44,7 +44,8 @@ stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);}
           stmts 
           (ELSE NEWLINE {output.if_else();} stmts END {output.if_else_end();}    
           | END {output.if_end();})                     
-        | WHILE WS expr WS DO NEWLINE stmts END {}8
+        | WHILE WS {output.while_cond();} expr WS DO NEWLINE {output.while_in($expr.identifier);} 
+          stmts END {output.while_out($expr.identifier);}
         | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
         | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
       //| RETURN expr
