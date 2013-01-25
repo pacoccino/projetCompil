@@ -121,8 +121,12 @@ public class LLVM {
 		putCode(loopInstructions + ":");
 	}
 	
+	public void returnExpr(String cName) {
+		putCode("ret i32 " + cName);
+	}
+	
 	public void while_out(String cName) {
-		putCode("br i1 "+ cName + ", label %" + loopCondition + ", label %" + loopContinuation);
+		putCode("br label %" + loopCondition);
 		putCode(loopContinuation + ":");
 	}
 	
