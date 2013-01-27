@@ -48,8 +48,8 @@ stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);}
         | WHILE WS {output.while_cond();} expr WS DO NEWLINE {output.while_in($expr.identifier);} 
           stmts END {output.while_out($expr.identifier);}
         | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
-        | ID '=' expr      { output.store($ID.text, $expr.identifier);  }
-        | RETURN WS expr {output.returnExpr($expr.identifier);}
+        | ID '=' expr       { output.store($ID.text, $expr.identifier);  }
+        | RETURN WS expr    { output.returnExpr($expr.identifier);}
         | 'print(' ID ')'   { output.print($ID.text); }
       //| DEF ID opt_params term stmts terms END
       ;
@@ -61,25 +61,23 @@ expr returns [String identifier]
         
 boolexpr returns [String identifier]
     :   a=compexpr  {$identifier = $a.identifier;}
-        ((WS)* (AND | OR) (WS)* b=compexpr { } )*
+        ((WS)* c=(AND | OR) (WS)* b=compexpr {$identifier = output.logical($a.identifier, $b.identifier, $c.text); })*
     ;
     
 compexpr returns [String identifier]
     :   a=addition {$identifier = $a.identifier;}
-        ((WS)* COMP (WS)* b=addition {$identifier = output.condition($a.identifier, $b.identifier, $COMP.text); })* 
+        ((WS)* COMP (WS)? b=addition {$identifier = output.operation($a.identifier, $b.identifier, $COMP.text); })* 
     ; 
      
     
 addition returns [String identifier]
     :   a=multiplication               { $identifier = $a.identifier; }
-    ( '+' b=multiplication { $identifier = output.addition($identifier, $b.identifier); } )*
-    ( '-' b=multiplication { $identifier = output.substract($identifier, $b.identifier); } )*
+        ( op=('+'|'-') b=multiplication { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
     ;
     
 multiplication returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
-        ( '*' b=atom { $identifier = output.multiply($identifier, $b.identifier); } )*
-        ( '/' b=atom { $identifier = output.division($identifier, $b.identifier); } )*
+        ( op=('*'|'/') b=atom { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
     ;
 
 atom returns [String identifier]
@@ -95,14 +93,16 @@ terms:
     ;
 term      
     : ';'
+    //| WS* '//' (options{greedy=false;} : STRING)* NEWLINE // commentaires
     | NEWLINE
     ;
 
 BOOL : ('true' | 'false');
-ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+ ('a'..'z'|'A'..'Z'|'_'|'0'..'9')*;
+ID  :   ('$'|'@')? ('a'..'z'|'A'..'Z'|'_')+;
 INT :   '0'..'9'+ ;
 FLOAT :   ('0'..'9')+ '.' ('0'..'9')* ;
 NEWLINE:'\r'? '\n' ;
-WS  :   (' '|'\t')+  ; 
+WS  :   (' '|'\t')+ ; 
 COMP : ('<' | '<=' | '>' | '>=' | '==' | '!=');
 STRING: '\"' (.)* '\"';
+//CHARAUTH: (options{greedy=false;} : 'a'..'z'|'A'..'Z'|'_'|'-'|'0'..'9'|' '|',')*;

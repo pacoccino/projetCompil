@@ -1,0 +1,32 @@
+a=2
+b=3
+c=a+b+1
+d=c+a*2
+print(d)
+
+f=2.2
+ff=3.4
+fff=f+ff
+ffff=f*ff
+fi=a*f
+print(fff)
+print(ffff)
+print(fi)
+
+boolf=false&&true
+boolt=true&& true
+boolff=false ||false
+booltt=true || false
+
+e=0
+if boolt==true||boolf == true then
+e=1
+else
+e=2
+end
+
+if fff < a || ffff == 7.48 then
+e=e+10
+end
+
+print(e)

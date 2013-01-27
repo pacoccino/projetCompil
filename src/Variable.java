@@ -19,13 +19,13 @@ public class Variable {
 		case INT:
 			return "i32";
 		case FLOAT:
-			return "f32";
+			return "double";
 		case BOOLEAN:
 			return "i1";
 		case STRING:
 			return "i8*";
 		default:
-			return "kikou";
+			return "Bad_Type";
 		}
 	}
 }
