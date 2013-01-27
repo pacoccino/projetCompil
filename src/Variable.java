@@ -16,17 +16,6 @@ public class Variable {
 	}
 	
 	public String ll_typeName() {
-		switch(type) {
-		case INT:
-			return "i32";
-		case FLOAT:
-			return "double";
-		case BOOLEAN:
-			return "i1";
-		case STRING:
-			return "i8*";
-		default:
-			return "Bad_Type";
-		}
+		return LLVM.ll_typeName(type);
 	}
 }

@@ -3,7 +3,7 @@ import java.io.File;
 import java.util.Map;
 import java.util.HashMap;
 import java.io.FileWriter;
-import java.io.FileReader;
+//import java.io.FileReader;
 import java.io.IOException;
 
 
@@ -11,9 +11,9 @@ public class LLVM {
 	File destination;
 	FileWriter destinationW;
 	final static String destinationName="ll.ll";
-	Map<String, Variable> varMap = new HashMap<String, Variable>();
-	StringBuffer code;
-	boolean inFunction;
+	Map<String, Variable> varMap;
+	Map<String, Variable> globalVarMap;
+	
 	int nStack;
 	int brStack;
 	int loopStack;
@@ -24,6 +24,12 @@ public class LLVM {
 	String loopCondition;
 	String loopInstructions;
 	String loopContinuation;
+	
+	StringBuffer funcCalling;
+	
+	StringBuffer headerCode;
+	StringBuffer mainCode;
+	Function actualFunc;
 
 	public LLVM() {
 		try {
@@ -35,29 +41,106 @@ public class LLVM {
 			e.printStackTrace();	
 		}
 		
-		code = new StringBuffer();
+		mainCode = new StringBuffer();
+		headerCode = new StringBuffer();
+		
+		funcCalling = null;
+		
+		globalVarMap = new HashMap<String, Variable>();
+		varMap = globalVarMap;
 		
 		nStack = 0;
 		brStack = 0;
 		loopStack = 0;
-		inFunction = false;
-		putCode("");
-		putCode("declare void @printi(i32)");
-		putCode("declare void @printd(double)");
-		putCode("declare void @prints(i8*)");
-		putCode("");
-		putCode("define i32 @main() {");
-		inFunction = true;
+		putOutCode("declare void @printi(i32)");
+		putOutCode("declare void @printd(double)");
+		putOutCode("declare void @prints(i8*)");
+		
+		mainCode.append("\ndefine i32 @main() {\n");
+	}
+	
+	public void finalize(){
+		//for(String s:varMap.keySet())
+		//	System.out.println(s +" : "+ varMap.get(s).type);
+		mainCode.append("ret i32 0\n");
+		mainCode.append("}\n");
+		String finalCode = new String(headerCode.append(mainCode));
+		try{
+			destinationW.write(finalCode);
+			destinationW.flush();
+			destinationW.close();
+		}
+		catch(IOException e)
+		{
+			e.printStackTrace();	
+		}
 	}
 
 	void putCode(String s) {
-		String tab="";
-		if(inFunction)
-			tab="\t";
-		code.append(tab+s+"\n");
+		String tab="\t";
+		if(actualFunc == null)
+			mainCode.append(tab+s+"\n");
+		else
+			actualFunc.put(s);
 	}
 	void putOutCode(String s) {
-		code.insert(0,s+"\n");
+		headerCode.append(s+"\n");
+	}
+	
+	public void begin_function(String name) {
+		if(actualFunc != null) {
+			error("You cannot define function inside a function, sorry.");
+			return;
+		}
+		actualFunc = new Function(name);
+		varMap = new HashMap<String, Variable>();
+		
+	}
+	public void func_param(String param) {
+		if(actualFunc == null) {
+			error("Mangez des pommes.");
+			return;
+		}
+		store(param, "0");
+		
+	}
+	
+	public void end_function() {
+		Variable newFunc = new Variable(actualFunc.getType());
+		globalVarMap.put(actualFunc.getName(), newFunc);
+		headerCode.append(actualFunc.getFullCode());
+		actualFunc = null;
+		varMap = globalVarMap;
+	}
+	
+	public String func_call(String name) {
+		if(globalVarMap.containsKey(name))
+		{
+			Variable newVar = globalVarMap.get(name);
+			funcCalling = new StringBuffer();
+			addStack();	
+			funcCalling.append(stackName +" = call "+newVar.ll_typeName()+" @"+name+"(");
+			varMap.put(stackName.substring(1), newVar);
+			return stackName;
+		}
+		else
+		{
+			error("Fonction non definie");
+			return "err";
+		}
+	}
+	public void func_call_param(String name) {
+		//if(funcCalling != null)
+		//	funcCalling.append(" "+ll_typeName(getType(name))+ " " + name + ",");
+	}
+	public void func_call_param_end() {
+		if(funcCalling != null) {
+			if(funcCalling.charAt(funcCalling.length()-1) != '(')
+					funcCalling.deleteCharAt(funcCalling.length()-1);
+			funcCalling.append(")");
+			putCode(new String(funcCalling));
+			funcCalling = null;
+		}
 	}
 	
 	public String load(String name) {
@@ -107,13 +190,30 @@ public class LLVM {
 	
 	}
 	
-	private Types getType(String code) {
+	public static String ll_typeName(Types type) {
+		switch(type) {
+		case INT:
+			return "i32";
+		case FLOAT:
+			return "double";
+		case BOOLEAN:
+			return "i1";
+		case STRING:
+			return "i8*";
+		case VOID:
+			return "void";
+		default:
+			return "Bad_Type";
+		}
+	}
+	
+	Types getType(String code) {
 		final String INT = "[0-9]+";
 		final String FLOAT = "[0-9]+\\.[0-9]*";
 		final String ID  = "[\\$@]?[a-zA-Z_]+[a-zA-Z0-9_]*";
 		final String BOOL  = "true|false";
 		final String STRING  = "\".*\"";
-		
+
 		if(code.matches("%" + ID)) {
 			return varMap.get(code.substring(1)).type;
 		}
@@ -275,7 +375,16 @@ public class LLVM {
 	}
 	
 	public void returnExpr(String cName) {
-		putCode("ret i32 " + cName);
+		if(actualFunc != null) {
+			if(!actualFunc.setType(getType(cName)))
+			{
+				error("Le type de retour d'une fonction doit etre unique.");
+				return;
+			}
+			putCode("ret " +actualFunc.getllType()+ " " + cName);
+		}
+		else
+			putCode("ret i32 " + cName);
 	}
 	
 	public void if_in(String cName) {
@@ -318,13 +427,13 @@ public class LLVM {
 		Types type = getType(name);
 		switch (type) {
 		case INT:
-			putCode("call void @printi( i32 "+ load(name) +" )");
+			putCode("call void @printi( i32 "+ name +" )");
 			break;
 		case FLOAT:
-			putCode("call void @printd( double "+ load(name) +" )");
+			putCode("call void @printd( double "+ name +" )");
 			break;
 		case STRING:
-			putCode("call void @prints( i8* "+ load(name) +" )");
+			putCode("call void @prints( i8* "+ name +" )");
 			break;
 		default:
 			error("Unprintable variable");
@@ -332,45 +441,28 @@ public class LLVM {
 		//System.out.println("out:"+name+ " : "+type);
 	}
 	
-	private void addStack() {
+	void addStack() {
 		stackName = "%t"+nStack;
 		nStack++;
 	}
 
-	private void addBr() {
+	void addBr() {
 		brNameT = "ifT" + brStack;
 		brNameF = "ifF" + brStack;
 		brNameE = "ifE" + brStack;
 		brStack++;
 	}
 	
-	private void addLoop() {
+	void addLoop() {
 		loopCondition = "loopCond" + loopStack;
 		loopInstructions = "loopInstructs" + loopStack;
 		loopContinuation = "LoopContinu" + loopStack;
 		loopStack++;
 	}
 
-	private void error(String err) {
+	void error(String err) {
 		System.out.println("Erreur :\n\t"+err+"\n");
 		//System.exit(0);
 	}
 
-	public void finalize(){
-		//for(String s:varMap.keySet())
-		//	System.out.println(s +" : "+ varMap.get(s).type);
-		putCode("ret i32 0");
-		inFunction = false;
-		putCode("}");
-		String finalCode = new String(code);
-		try{
-			destinationW.write(finalCode);
-			destinationW.flush();
-			destinationW.close();
-		}
-		catch(IOException e)
-		{
-			e.printStackTrace();	
-		}
-	}
 }

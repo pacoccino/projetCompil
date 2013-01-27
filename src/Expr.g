@@ -16,6 +16,7 @@ tokens {
   DO='do';
   AND='&&';
   OR='||';
+  DEF='def';
   RETURN='return';
 }
 
@@ -41,18 +42,34 @@ stmts : (stmt terms) +
              
 stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);} 
           stmts 
-          (ELSE NEWLINE {output.if_else();} stmts END {output.if_else_end();}    
-          | END {output.if_end();})                     
-        | WHILE WS {output.while_cond();} expr WS DO NEWLINE {output.while_in($expr.identifier);} 
-          stmts END {output.while_out();}
+          ( ELSE NEWLINE { output.if_else(); } stmts END {output.if_else_end();}    
+          | END          { output.if_end();  } )  
+                             
+        | WHILE                 {output.while_cond();} 
+          WS expr WS DO NEWLINE {output.while_in($expr.identifier);} 
+          stmts END             {output.while_out(); }
+          
         | FOR WS ID WS IN WS a=expr WS TO WS b=expr WS  { output.for_in($ID.text, $a.identifier, $b.identifier); }
-          DO NEWLINE stmts END { output.for_out($ID.text); }
-        | ID (WS)* '=' (WS)* expr       { output.store($ID.text, $expr.identifier);  }
-        | RETURN WS expr    { output.returnExpr($expr.identifier);}
-        | 'print(' ID ')'   { output.print($ID.text); }
-      //| DEF ID opt_params term stmts terms END
+          DO NEWLINE stmts END                          { output.for_out($ID.text); }
+          
+        | ID (WS)* '=' (WS)* expr      { output.store($ID.text, $expr.identifier);  }
+        | RETURN WS expr               { output.returnExpr($expr.identifier);}
+        | DEF WS ID                    { output.begin_function($ID.text);}
+          opt_params NEWLINE 
+          stmts END                    { output.end_function();}
+          
+        | 'print(' expr ')'              { output.print($expr.identifier); }
       ;
+      
+opt_params      : /* none */
+                | '(' ')'
+                | '(' params ')'
+;
+params          : param (',' param)*
+; 
 
+param           : ID                  { output.func_param($ID.text);}
+;
     
 expr returns [String identifier]
     :   a=boolexpr {$identifier = $a.identifier;}
@@ -81,20 +98,29 @@ multiplication returns [String identifier]
     ;
 
 atom returns [String identifier]
-    :   a=INT     { $identifier = $a.text; }
-    |   a=FLOAT   { $identifier = $a.text; }
-    |   a=STRING  { $identifier = $a.text; }
-    |   a=BOOL    { $identifier = $a.text; }
-    |   a=ID      { $identifier = output.load($ID.text); }
+    :   a=INT           { $identifier = $a.text; }
+    |   a=FLOAT         { $identifier = $a.text; }
+    |   a=STRING        { $identifier = $a.text; }
+    |   a=BOOL          { $identifier = $a.text; }
+    |   a=ID            { $identifier = output.func_call($ID.text); }
+        ( '(' ex_params ')' | '(' ')'  )
+                        { output.func_call_param_end(); }
+                        
+    |   a=ID            { $identifier = output.load($ID.text); }
+
+    ;
+ex_params
+    :   a=expr        { output.func_call_param($a.identifier); }
+        (',' b=expr   { output.func_call_param($b.identifier); } )* 
     ;
 
 terms:
      term+
     ;
 term      
-    : ';'
+    : (WS)* ';'
     //| WS* '//' (options{greedy=false;} : STRING)* NEWLINE // commentaires
-    | NEWLINE
+    | (WS)* NEWLINE
     ;
 
 BOOL : ('true' | 'false');
