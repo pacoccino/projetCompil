@@ -9,3 +9,8 @@ void printd(double a)
 {
 	printf("%lf\n", a);
 }
+
+void prints(char *a)
+{
+	printf("%s\n", a);
+}

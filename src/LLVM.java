@@ -6,7 +6,6 @@ import java.io.FileWriter;
 import java.io.FileReader;
 import java.io.IOException;
 
-import sun.net.www.protocol.http.AuthCacheValue.Type;
 
 public class LLVM {
 	File destination;
@@ -170,6 +169,7 @@ public class LLVM {
 			else
 				error("Operateur ??");
 		}
+		
 		String newA = a;
 		String newB = b;
 		if(getType(a) == Types.INT && getType(b) == Types.INT)
@@ -191,8 +191,6 @@ public class LLVM {
 		}
 		else if(getType(a) == Types.INT && getType(b) == Types.FLOAT)
 		{
-			if(operation.equals("div"))
-				error("Division d'un entier par un flottant impossible");
 			newVar.type = Types.FLOAT;
 			putCode(stackName+" = uitofp i32 "+a+" to double  ");
 			newA = stackName;

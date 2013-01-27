@@ -67,7 +67,7 @@ compexpr returns [String identifier]
     :   a=addition {$identifier = $a.identifier;}
         ((WS)* COMP (WS)* b=addition {$identifier = output.operation($a.identifier, $b.identifier, $COMP.text); })* 
     ; 
-     
+
     
 addition returns [String identifier]
     :   a=multiplication               { $identifier = $a.identifier; }
