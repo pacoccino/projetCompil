@@ -8,10 +8,11 @@ public class Variable {
 	
 	public Variable(Types type){
 		this.type = type;
+		constant = false;
 	}
 	
 	public Variable(){
-		this.type = Types.OBJECT;
+		this(Types.OBJECT);
 	}
 	
 	public String ll_typeName() {

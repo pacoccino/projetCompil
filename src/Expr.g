@@ -78,6 +78,7 @@ addition returns [String identifier]
 multiplication returns [String identifier]
     :   a=atom               { $identifier = $a.identifier; }
         ( op=('*'|'/') b=atom { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
+        ( op=('*'|'/') '(' b=expr ')' { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
     ;
 
 atom returns [String identifier]

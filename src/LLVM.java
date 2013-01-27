@@ -60,12 +60,26 @@ public class LLVM {
 	}
 
 	public void store(String name, String val) {
+		Variable oldVar = varMap.get(name);
 		Variable newVar = new Variable(getType(val));
-		if(!varMap.containsKey(name)) {
+		if(oldVar == null) {
+			if(name.matches("[A-Z].*"))
+				newVar.constant = true;
 			putCode("%"+name+" = alloca "+newVar.ll_typeName());
+			putCode("store "+newVar.ll_typeName()+" "+val+", "+newVar.ll_typeName()+"* %"+name);
+			varMap.put(name, newVar);
 		}
-		putCode("store "+newVar.ll_typeName()+" "+val+", "+newVar.ll_typeName()+"* %"+name);
-		varMap.put(name, newVar);
+		else {
+			if(oldVar.constant)
+				error("Tentative de reafectation sur une variable constante ("+name+")");
+			else if(newVar.type != oldVar.type)
+				error("Changement de type d'une variable impossible. ("+name +":"+ newVar.type +"/"+ oldVar.type +")");
+			else
+			{
+				putCode("store "+newVar.ll_typeName()+" "+val+", "+newVar.ll_typeName()+"* %"+name);
+				varMap.put(name, newVar);
+			}
+		}
 	}
 	
 	private Types getType(String code) {
@@ -88,7 +102,10 @@ public class LLVM {
 			return Types.BOOLEAN;
 		}
 		else if(code.matches(ID)){
-			return varMap.get(code).type;
+			if(varMap.containsKey(code))
+				return varMap.get(code).type;
+			else
+				error("Variable indefinie");
 		}
 		else if(code.matches(STRING)){
 			return Types.STRING;
@@ -101,35 +118,17 @@ public class LLVM {
 		System.out.println(getType(s).toString());
 	}
 
-	public String condition(String aName, String bName, String cond) {
-		addStack();
-		Variable newVar = new Variable(Types.BOOLEAN);
-		String compItem = null;
-		if (cond.equals("=="))
-			compItem = new String("eq");
-		else  if (cond.equals("!="))
-			compItem = new String("ne");
-		else  if (cond.equals("<="))
-			compItem = new String("use");
-		else  if (cond.equals(">="))
-			compItem = new String("sge");
-		else  if (cond.equals(">"))
-			compItem = new String("sgt");
-		else  if (cond.equals("<"))
-			compItem = new String("slt");
-		else
-			error("opérateur non prit en charge");
-		putCode(stackName + " = icmp " + compItem + " i32 " + aName + ", " + bName);
-		varMap.put(stackName.substring(1),newVar);
-		return stackName;
-	}
 	
 	public String logical(String aName, String bName, String log) {
 		addStack();
 		Variable newVar = new Variable(Types.BOOLEAN);
 		String compItem = null;
 		if(getType(aName) != Types.BOOLEAN || getType(bName) != Types.BOOLEAN)
-			error("Comparaison logique sur autres varables que booleens");
+		{
+			error("Comparaison logique sur autres variables que booleens impossible ("+aName+log+bName+")");
+			error("m:"+getType(aName) + getType(bName));
+			return "err";
+		}
 		if (log.equals("&&"))
 			compItem = new String("and");
 		else  if (log.equals("||"))
@@ -211,72 +210,7 @@ public class LLVM {
 		default:
 			error("Unprintable variable");
 		}
-		System.out.println("out:"+name+ " : "+type+" a: "+varMap.get(name).type);
-	}
-
-	public String addition(String a, String b){
-		addStack();
-		Variable newVar = new Variable();
-		String operation = "add";
-		if(getType(a) == Types.INT && getType(b) == Types.INT)
-		{
-			newVar.type = Types.INT;
-		}
-		else if(getType(a) == Types.FLOAT && getType(b) == Types.FLOAT)
-		{
-			newVar.type = Types.FLOAT;
-			operation = "fadd";
-		}
-		
-		putCode(stackName+" = "+operation+" "+ newVar.ll_typeName() +" "+a+", "+b);
-		varMap.put(stackName.substring(1),newVar);
-		return stackName;
-	}
-	
-	public String substract(String a, String b){
-		addStack();
-		Variable newVar = new Variable();
-		newVar.type = Types.INT;
-		putCode(stackName+" = sub i32 "+a+", "+b);
-		varMap.put(stackName.substring(1), newVar);
-		return stackName;
-	}
-	
-	public String multiply(String a, String b){
-		addStack();
-		Variable newVar = new Variable();
-		String operation = "mul";
-		String newA = a;
-		String newB = b;
-		if(getType(a) == Types.INT && getType(b) == Types.INT)
-		{
-			newVar.type = Types.INT;
-		}
-		else if(getType(a) == Types.FLOAT && getType(b) == Types.FLOAT)
-		{
-			newVar.type = Types.FLOAT;
-			operation = "fmul";
-		}
-		else if(getType(a) == Types.INT && getType(b) == Types.FLOAT)
-		{
-			newVar.type = Types.FLOAT;
-			putCode(stackName+" = uitofp i32 "+a+" to double  ");
-			newA = stackName;
-			addStack();
-			operation = "fmul";
-		}
-		else if(getType(a) == Types.FLOAT && getType(b) == Types.INT)
-		{
-			newVar.type = Types.FLOAT;
-			putCode(stackName+" = uitofp i32 "+b+" to double  ");
-			newB = stackName;
-			addStack();
-			operation = "fmul";
-		}
-		
-		putCode(stackName+" = "+operation+" "+ newVar.ll_typeName() +" "+newA+", "+newB);
-		varMap.put(stackName.substring(1),newVar);
-		return stackName;
+		System.out.println("out:"+name+ " : "+type);
 	}
 	
 	public String operation(String a, String b, String op){
@@ -346,20 +280,14 @@ public class LLVM {
 		}
 		else
 			error("Operation impossible. ( "+ getType(a) + op + getType(b) +" )");
-		
+
 		putCode(stackName+" = "+operation+" "+operationType+" "+ newVar.ll_typeName() +" "+newA+", "+newB);
+		if(operation.substring(1).equals("cmp"))
+			newVar.type=Types.BOOLEAN;
 		varMap.put(stackName.substring(1),newVar);
 		return stackName;
 	}
 	
-	public String division(String a, String b){
-		addStack();
-		Variable newVar = new Variable(Types.INT);
-		putCode(stackName+" = mul i32 "+a+", "+b);
-		varMap.put(stackName.substring(1), newVar);
-		return stackName;
-	}
-
 	private void addStack() {
 		stackName = "%t"+nStack;
 		nStack++;

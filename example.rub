@@ -1,8 +1,13 @@
 a=2
 b=3
 c=a+b+1
-d=c+a*2
+d=c+a*(2+1)
 print(d)
+
+CONS=5
+CONS=6
+print(CONS)
+
 
 f=2.2
 ff=3.4
@@ -30,3 +35,10 @@ e=e+10
 end
 
 print(e)
+
+i=0
+while i<10 do
+i=i+1
+print(i)
+end
+
