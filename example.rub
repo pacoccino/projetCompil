@@ -59,3 +59,25 @@ for x in 10 .. 15 do
 print(x)
 end
 
+for y in 20 .. 30 do
+if y>25 then
+print(y*10)
+end
+end
+
+n=25 
+
+def bar()
+n=72
+print(n)
+n=n+2
+a=n+4
+return a
+end
+
+z=bar()
+print(z)
+
+zz=2+bar()
+print(zz)
+
