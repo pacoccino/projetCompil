@@ -14,6 +14,7 @@ public class LLVM {
 	final static String destinationName="ll.ll";
 	Map<String, Variable> varMap = new HashMap<String, Variable>();
 	StringBuffer code;
+	boolean inFunction;
 	int nStack;
 	int brStack;
 	int loopStack;
@@ -34,17 +35,30 @@ public class LLVM {
 		{
 			e.printStackTrace();	
 		}
+		
 		code = new StringBuffer();
-		putCode("declare void @printi(i32)");
-		putCode("declare void @printd(double)");
-		putCode("define i32 @main() {");
+		
 		nStack = 0;
 		brStack = 0;
 		loopStack = 0;
+		inFunction = false;
+		putCode("");
+		putCode("declare void @printi(i32)");
+		putCode("declare void @printd(double)");
+		putCode("declare void @prints(i8*)");
+		putCode("");
+		putCode("define i32 @main() {");
+		inFunction = true;
 	}
 
 	void putCode(String s) {
-		code.append(s+"\n");
+		String tab="";
+		if(inFunction)
+			tab="\t";
+		code.append(tab+s+"\n");
+	}
+	void putOutCode(String s) {
+		code.insert(0,s+"\n");
 	}
 	
 	public String load(String name) {
@@ -62,6 +76,17 @@ public class LLVM {
 	public void store(String name, String val) {
 		Variable oldVar = varMap.get(name);
 		Variable newVar = new Variable(getType(val));
+		if(newVar.type == Types.STRING) {
+			int size = val.length()-1;
+			String chaine = val.substring(1, size);
+			addStack();
+			String internal = "@"+stackName.substring(1);
+			putOutCode(internal +" = internal constant ["+size+" x i8] c\""+chaine+"\\00\"");
+			addStack();
+			putCode(stackName +" = getelementptr ["+size+" x i8]* "+internal+", i32 0,i32 0");
+			val = stackName;
+		}
+	
 		if(oldVar == null) {
 			if(name.matches("[A-Z].*"))
 				newVar.constant = true;
@@ -80,6 +105,7 @@ public class LLVM {
 				varMap.put(name, newVar);
 			}
 		}
+	
 	}
 	
 	private Types getType(String code) {
@@ -113,106 +139,7 @@ public class LLVM {
 		
 		return Types.OBJECT;
 	}
-	
-	public void printType(String s) {
-		System.out.println(getType(s).toString());
-	}
 
-	
-	public String logical(String aName, String bName, String log) {
-		addStack();
-		Variable newVar = new Variable(Types.BOOLEAN);
-		String compItem = null;
-		if(getType(aName) != Types.BOOLEAN || getType(bName) != Types.BOOLEAN)
-		{
-			error("Comparaison logique sur autres variables que booleens impossible ("+aName+log+bName+")");
-			error("m:"+getType(aName) + getType(bName));
-			return "err";
-		}
-		if (log.equals("&&"))
-			compItem = new String("and");
-		else  if (log.equals("||"))
-			compItem = new String("or");
-		else
-			error("opérateur non prit en charge");
-		putCode(stackName + " = " + compItem + " i1 " + aName + ", " + bName);
-		varMap.put(stackName.substring(1),newVar);
-		return stackName;
-	}
-	
-	
-	public void while_cond() {
-		addLoop();
-		putCode("br label %" + loopCondition);
-		putCode(loopCondition + ":");
-	}
-	
-	public void while_in(String cName) {
-		putCode("br i1 "+ cName + ", label %" + loopInstructions + ", label %" + loopContinuation);
-		putCode(loopInstructions + ":");
-	}
-	
-	public void returnExpr(String cName) {
-		putCode("ret i32 " + cName);
-	}
-	
-	public void while_out(String cName) {
-		putCode("br label %" + loopCondition);
-		putCode(loopContinuation + ":");
-	}
-	
-	public void if_in(String cName) {
-		addBr();
-		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
-		putCode(brNameT + ":");
-		
-	}
-	
-	public void if_else() {
-		putCode("br label %"+brNameE);
-		putCode(brNameF + ":");
-		
-	}
-	public void if_else_end() {
-		putCode("br label %"+brNameE);
-		putCode(brNameE + ":");
-		
-	}
-	public void if_end() {
-		putCode("br label %"+brNameF);
-		putCode("br label %"+brNameF);
-		putCode(brNameF + ":");
-		
-	}
-
-	
-	public void storeFrom(String to, String from) {
-		
-		if(from.charAt(0)!='%' || varMap.containsKey(from)) {
-			if(!varMap.containsKey(to)) {
-				putCode("%"+to+" = alloca i32");
-			}
-			putCode("store i32 "+from+",i32* %"+to);
-			varMap.put(to, varMap.get(from));
-		}
-	}
-
-	public void print(String name) {
-		
-		Types type = getType(name);
-		switch (type) {
-		case INT:
-			putCode("call void @printi( i32 "+ load(name) +" )");
-			break;
-		case FLOAT:
-			putCode("call void @printd( double "+ load(name) +" )");
-			break;
-		default:
-			error("Unprintable variable");
-		}
-		System.out.println("out:"+name+ " : "+type);
-	}
-	
 	public String operation(String a, String b, String op){
 		addStack();
 		Variable newVar = new Variable();
@@ -224,6 +151,8 @@ public class LLVM {
 			operation = "sub";
 		else if(op.equals("*"))
 			operation = "mul";
+		else if(op.equals("/"))
+			operation = "div";
 		else {
 			operation = "cmp";
 			if(op.equals("=="))
@@ -231,7 +160,7 @@ public class LLVM {
 			else if (op.equals("!="))
 				operationType = "ne";
 			else if (op.equals("<="))
-				operationType = "use";
+				operationType = "sle";
 			else if (op.equals(">="))
 				operationType = "sge";
 			else if (op.equals(">"))
@@ -288,6 +217,123 @@ public class LLVM {
 		return stackName;
 	}
 	
+	public String logical(String aName, String bName, String log) {
+		addStack();
+		Variable newVar = new Variable(Types.BOOLEAN);
+		String compItem = null;
+		if(getType(aName) != Types.BOOLEAN || getType(bName) != Types.BOOLEAN)
+		{
+			error("Comparaison logique sur autres variables que booleens impossible ("+aName+log+bName+")");
+			error("m:"+getType(aName) + getType(bName));
+			return "err";
+		}
+		if (log.equals("&&"))
+			compItem = new String("and");
+		else  if (log.equals("||"))
+			compItem = new String("or");
+		else
+			error("opérateur non prit en charge");
+		putCode(stackName + " = " + compItem + " i1 " + aName + ", " + bName);
+		varMap.put(stackName.substring(1),newVar);
+		return stackName;
+	}
+	
+	public void for_in(String varName, String from, String to) {
+		addLoop();
+		if(getType(from) != Types.INT || getType(to) != Types.INT) {
+			error("For utilisable uniquement avec des entiers.");
+			return;
+		}
+		store(varName, from);
+		putCode("br label %" + loopCondition);
+		putCode(loopCondition + ":");
+		String increm = load(varName);
+		String cond = operation(increm, to, "<=");
+		putCode("br i1 "+ cond + ", label %" + loopInstructions + ", label %" + loopContinuation);
+		putCode(loopInstructions + ":");
+	}
+	public void for_out(String varName) {
+		String increm = load(varName);
+		String newVal = operation(increm, "1", "+");
+		store(varName, newVal);
+		putCode("br label %" + loopCondition);
+		putCode(loopContinuation + ":");
+	}
+	
+	public void while_cond() {
+		addLoop();
+		putCode("br label %" + loopCondition);
+		putCode(loopCondition + ":");
+	}
+	
+	public void while_in(String cName) {
+		putCode("br i1 "+ cName + ", label %" + loopInstructions + ", label %" + loopContinuation);
+		putCode(loopInstructions + ":");
+	}
+	
+	public void while_out() {
+		putCode("br label %" + loopCondition);
+		putCode(loopContinuation + ":");
+	}
+	
+	public void returnExpr(String cName) {
+		putCode("ret i32 " + cName);
+	}
+	
+	public void if_in(String cName) {
+		addBr();
+		putCode("br i1 "+ cName + ", label %" + brNameT + ", label %" +brNameF);
+		putCode(brNameT + ":");
+		
+	}
+	
+	public void if_else() {
+		putCode("br label %"+brNameE);
+		putCode(brNameF + ":");
+		
+	}
+	public void if_else_end() {
+		putCode("br label %"+brNameE);
+		putCode(brNameE + ":");
+		
+	}
+	public void if_end() {
+		putCode("br label %"+brNameF);
+		putCode("br label %"+brNameF);
+		putCode(brNameF + ":");
+		
+	}
+	
+	public void storeFrom(String to, String from) {
+		
+		if(from.charAt(0)!='%' || varMap.containsKey(from)) {
+			if(!varMap.containsKey(to)) {
+				putCode("%"+to+" = alloca i32");
+			}
+			putCode("store i32 "+from+",i32* %"+to);
+			varMap.put(to, varMap.get(from));
+		}
+	}
+
+	public void print(String name) {
+		
+		Types type = getType(name);
+		switch (type) {
+		case INT:
+			putCode("call void @printi( i32 "+ load(name) +" )");
+			break;
+		case FLOAT:
+			putCode("call void @printd( double "+ load(name) +" )");
+			break;
+		case STRING:
+			putCode("call void @prints( i8* "+ load(name) +" )");
+			break;
+		default:
+			error("Unprintable variable");
+		}
+		//System.out.println("out:"+name+ " : "+type);
+	}
+	
 	private void addStack() {
 		stackName = "%t"+nStack;
 		nStack++;
@@ -308,22 +354,15 @@ public class LLVM {
 	}
 
 	private void error(String err) {
-		System.out.println("Erreur fatale :\n\t"+err+"\n");
+		System.out.println("Erreur :\n\t"+err+"\n");
 		//System.exit(0);
 	}
 
-	/*public void setStack() {
-		stackSnapshot=tempStack;
-	}
-	public void endStack() {
-
-		tempStack=stackSnapshot;
-	}*/
-
 	public void finalize(){
-		for(String s:varMap.keySet())
-			System.out.println(s +" : "+ varMap.get(s).type);
+		//for(String s:varMap.keySet())
+		//	System.out.println(s +" : "+ varMap.get(s).type);
 		putCode("ret i32 0");
+		inFunction = false;
 		putCode("}");
 		String finalCode = new String(code);
 		try{

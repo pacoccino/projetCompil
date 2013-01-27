@@ -34,8 +34,6 @@ public LLVM output = new LLVM();
 }
 
 
-
-
 prog:   stmts ;
     
 stmts : (stmt terms) +
@@ -46,9 +44,10 @@ stmt    : IF WS expr WS THEN NEWLINE  {output.if_in($expr.identifier);}
           (ELSE NEWLINE {output.if_else();} stmts END {output.if_else_end();}    
           | END {output.if_end();})                     
         | WHILE WS {output.while_cond();} expr WS DO NEWLINE {output.while_in($expr.identifier);} 
-          stmts END {output.while_out($expr.identifier);}
-        | FOR WS ID WS IN WS expr WS TO WS expr WS DO NEWLINE stmts END {}
-        | ID '=' expr       { output.store($ID.text, $expr.identifier);  }
+          stmts END {output.while_out();}
+        | FOR WS ID WS IN WS a=expr WS TO WS b=expr WS  { output.for_in($ID.text, $a.identifier, $b.identifier); }
+          DO NEWLINE stmts END { output.for_out($ID.text); }
+        | ID (WS)* '=' (WS)* expr       { output.store($ID.text, $expr.identifier);  }
         | RETURN WS expr    { output.returnExpr($expr.identifier);}
         | 'print(' ID ')'   { output.print($ID.text); }
       //| DEF ID opt_params term stmts terms END
@@ -66,19 +65,19 @@ boolexpr returns [String identifier]
     
 compexpr returns [String identifier]
     :   a=addition {$identifier = $a.identifier;}
-        ((WS)* COMP (WS)? b=addition {$identifier = output.operation($a.identifier, $b.identifier, $COMP.text); })* 
+        ((WS)* COMP (WS)* b=addition {$identifier = output.operation($a.identifier, $b.identifier, $COMP.text); })* 
     ; 
      
     
 addition returns [String identifier]
     :   a=multiplication               { $identifier = $a.identifier; }
-        ( op=('+'|'-') b=multiplication { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
+        ((WS)* op=('+'|'-') (WS)* b=multiplication { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
     ;
     
 multiplication returns [String identifier]
-    :   a=atom               { $identifier = $a.identifier; }
-        ( op=('*'|'/') b=atom { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
-        ( op=('*'|'/') '(' b=expr ')' { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
+    :   ( a=atom | '(' a=expr ')' )           { $identifier = $a.identifier; }
+        ((WS)* op=('*'|'/') (WS)* b=atom { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
+        ((WS)* op=('*'|'/') (WS)* '(' b=expr ')' { $identifier = output.operation($identifier, $b.identifier, $op.text); } )*
     ;
 
 atom returns [String identifier]

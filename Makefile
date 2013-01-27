@@ -16,13 +16,14 @@ compex: java
 	java -cp build:antlr-lib.jar Run < example.rub
 
 	
-java:
+java: grammar
 	mkdir -p build
-	javac src/Run.java -sourcepath src -cp antlr-lib.jar -d build
+	javac src/Run.java -sourcepath src -cp antlr-lib.jar -d build -Xlint:none
 
 printer: 
 	gcc -c src/print.c -o build/print.o
 
-
+grammar:
+	java -cp antlr-lib.jar org.antlr.Tool src/Expr.g
 clean:
 	rm build/*
