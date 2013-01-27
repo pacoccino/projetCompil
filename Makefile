@@ -21,6 +21,7 @@ java: grammar
 	javac src/Run.java -sourcepath src -cp antlr-lib.jar -d build -Xlint:none
 
 printer: 
+	mkdir -p build
 	gcc -c src/print.c -o build/print.o
 
 grammar:
